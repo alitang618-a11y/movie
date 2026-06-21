@@ -4,12 +4,10 @@ export const config = {
 
 export default async function handler() {
   const baseUrl = "https://xiedang.com";
-  // 1. 固定页面路由
   const staticPages = [
     { path: "/", priority: "1.0", changefreq: "daily" },
   ];
 
-  // 2. 你的全部专题页面
   const topics = [
     "2026-sci-fi",
     "2025-horror",
@@ -24,21 +22,16 @@ export default async function handler() {
     changefreq: "weekly"
   }));
 
-  // 拼接所有链接
   const allUrls = [...staticPages, ...topicUrls];
 
-  // 构造XML
-  let xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-`;
+  // 严格纯净XML，无多余空行、无script污染
+  let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
   allUrls.forEach(item => {
-    xml += `
-  <url>
+    xml += `  <url>
     <loc>${baseUrl}${item.path}</loc>
     <changefreq>${item.changefreq}</changefreq>
     <priority>${item.priority}</priority>
-  </url>
-`;
+  </url>\n`;
   });
   xml += "</urlset>";
 
