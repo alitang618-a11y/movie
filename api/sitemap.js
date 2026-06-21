@@ -24,7 +24,6 @@ export default async function handler() {
 
   const allUrls = [...staticPages, ...topicUrls];
 
-  // 纯XML字符串，无多余隐藏字符
   let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">';
   allUrls.forEach(item => {
     xml += `
@@ -36,7 +35,10 @@ export default async function handler() {
   });
   xml += "\n</urlset>";
 
-  return new Response(xml, {
+  // 关键：清除所有<script/>污染片段
+  const cleanXml = xml.replace(/<script\/>/g, "");
+
+  return new Response(cleanXml, {
     headers: {
       "Content-Type": "application/xml; charset=utf-8",
       "Cache-Control": "s-maxage=3600",
