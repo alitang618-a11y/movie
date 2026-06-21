@@ -343,8 +343,7 @@ async function router() {
 async function loadGenresBar(activeGenreId) {
     const t = ui[currentLang];
     const tmdbLang = currentLang === 'zh' ? 'zh-CN' : 'en-US';
-    const res = await fetch(`https://api.themoviedb.org/3/genre/movie/list?api_key=${TMDB_API_KEY}&language=${tmdbLang}`);
-    const data = await res.json();
+    const data = await fetchTMDB("/genre/movie/list", { language: tmdbLang });
     genreListCache = data.genres;
 
     const bar = document.getElementById('genres-list');
@@ -368,7 +367,7 @@ function getGenreNameById(gid) {
 function startGenresAutoScroll() {
     const genresList = document.getElementById('genres-list');
     if (!genresList) return;
-    if (typeof scrollTimer !== 'undefined') clearInterval(scrollTimer);
+    if (scrollTimer !== null) clearInterval(scrollTimer);
 
     let step = 1.0;
     let direction = 1; // 1: 右, -1: 左
@@ -389,7 +388,10 @@ function startGenresAutoScroll() {
         }
     }, 30);
 
-    genresList.onmouseenter = () => clearInterval(scrollTimer);
+    genresList.onmouseenter = () => {
+        clearInterval(scrollTimer);
+        scrollTimer = null;
+    };
     genresList.onmouseleave = () => startGenresAutoScroll();
 }
 
@@ -418,11 +420,11 @@ async function loadHomePage(query, genreId, topicKey = null) {
         const pageTitleText = currentLang === "zh" ? topic.zhTitle : topic.enTitle;
         document.getElementById('title-trending').innerText = pageTitleText;
 
-        let discoverUrl = `https://api.themoviedb.org/3/discover/${isTv ? "tv" : "movie"}?api_key=${TMDB_API_KEY}&language=${tmdbLang}&page=${currentPage}`;
-        Object.keys(topic.params).forEach(key => {
-            discoverUrl += `&${key}=${topic.params[key]}`;
-        })
-        await renderGrid(discoverUrl, 'grid-trending', false, isTv ? "tv" : "movie");
+        const mediaPath = isTv ? "/discover/tv" : "/discover/movie";
+        await renderGrid(mediaPath, 'grid-trending', false, isTv ? "tv" : "movie", {
+            page: currentPage,
+            ...topic.params
+        });
         secTrending.style.display = 'block';
         document.getElementById('page-num').innerText = currentPage;
         document.getElementById('prev-btn').disabled = currentPage <= 1;
@@ -439,21 +441,24 @@ async function loadHomePage(query, genreId, topicKey = null) {
     // 分支2：搜索 / 普通分类页
     if (query || genreId) {
         document.getElementById('pagination-box').style.display = 'flex';
-        let url = "";
         if (query) {
             document.getElementById('title-trending').innerText = `${t.searchRes} "${query}"`;
-            url = `https://api.themoviedb.org/3/search/multi?api_key=${TMDB_API_KEY}&language=${tmdbLang}&query=${encodeURIComponent(query)}&page=${currentPage}`;
+            await renderGrid("/search/multi", 'grid-trending', true, "movie", {
+                query: encodeURIComponent(query),
+                page: currentPage
+            });
             setPageMeta("search", { query: query });
         } else {
             const showName = getGenreNameById(genreId);
             document.getElementById('title-trending').innerText = showName;
-            url = `https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_API_KEY}&language=${tmdbLang}&with_genres=${genreId}&page=${currentPage}`;
+            await renderGrid("/discover/movie", 'grid-trending', false, "movie", {
+                with_genres: genreId,
+                page: currentPage
+            });
             setPageMeta("genre", { genreName: showName });
         }
         document.getElementById('page-num').innerText = currentPage;
         document.getElementById('prev-btn').disabled = currentPage <= 1;
-
-        await renderGrid(url, 'grid-trending', true);
         secTrending.style.display = 'block';
     }
     // 分支3：默认首页
@@ -472,11 +477,11 @@ async function loadHomePage(query, genreId, topicKey = null) {
 
         setPageMeta("home");
 
-        renderGrid(`https://api.themoviedb.org/3/movie/popular?api_key=${TMDB_API_KEY}&language=${tmdbLang}`, 'grid-popular');
-        renderGrid(`https://api.themoviedb.org/3/trending/movie/day?api_key=${TMDB_API_KEY}&language=${tmdbLang}`, 'grid-trending');
-        renderGrid(`https://api.themoviedb.org/3/movie/upcoming?api_key=${TMDB_API_KEY}&language=${tmdbLang}&region=US`, 'grid-upcoming');
-        renderGrid(`https://api.themoviedb.org/3/movie/top_rated?api_key=${TMDB_API_KEY}&language=${tmdbLang}`, 'grid-top-rated');
-        renderGrid(`https://api.themoviedb.org/3/tv/popular?api_key=${TMDB_API_KEY}&language=${tmdbLang}`, 'grid-tv-shows', false, 'tv');
+        renderGrid("/movie/popular", 'grid-popular');
+        renderGrid("/trending/movie/day", 'grid-trending');
+        renderGrid("/movie/upcoming", 'grid-upcoming', false, "movie", { region: "US" });
+        renderGrid("/movie/top_rated", 'grid-top-rated');
+        renderGrid("/tv/popular", 'grid-tv-shows', false, 'tv');
     }
 }
 
@@ -485,8 +490,10 @@ async function loadDetailPage(id, type = 'movie') {
     const t = ui[currentLang];
     const tmdbLang = currentLang === 'zh' ? 'zh-CN' : 'en-US';
 
-    const res = await fetch(`https://api.themoviedb.org/3/${type}/${id}?api_key=${TMDB_API_KEY}&language=${tmdbLang}&append_to_response=credits,keywords`);
-    const data = await res.json();
+    const data = await fetchTMDB(`/${type}/${id}`, {
+        language: tmdbLang,
+        append_to_response: "credits,keywords"
+    });
 
     const titleName = data.title || data.name;
     const releaseDate = data.release_date || data.first_air_date;
@@ -586,8 +593,7 @@ async function loadDetailPage(id, type = 'movie') {
     if (type === "movie") {
         const dirInfo = data.credits?.crew?.find(p => p.job === "Director");
         if (dirInfo) {
-            const directorUrl = `https://api.themoviedb.org/3/person/${dirInfo.id}/movie_credits?api_key=${TMDB_API_KEY}&language=${tmdbLang}`;
-            await renderGrid(directorUrl, "same-director-grid", false, "movie");
+            await renderGrid(`/person/${dirInfo.id}/movie_credits`, "same-director-grid", false, "movie");
         } else {
             directorBox.innerHTML = `<p style="color:#666">${currentLang === "zh" ? "暂无同导演影片" : "No other films by director"}</p>`;
         }
@@ -601,16 +607,17 @@ async function loadDetailPage(id, type = 'movie') {
     genreBox.innerHTML = "";
     if (data.genres && data.genres.length > 0) {
         const firstGenreId = data.genres[0].id;
-        const sameGenreUrl = `https://api.themoviedb.org/3/discover/${type}?api_key=${TMDB_API_KEY}&language=${tmdbLang}&with_genres=${firstGenreId}&sort_by=vote_average.desc`;
-        await renderGrid(sameGenreUrl, "same-genre-grid", false, type);
+        await renderGrid(`/discover/${type}`, "same-genre-grid", false, type, {
+            with_genres: firstGenreId,
+            sort_by: "vote_average.desc"
+        });
     } else {
         genreBox.innerHTML = `<p style="color:#666">${currentLang === "zh" ? "暂无同类影片" : "No same genre content"}</p>`;
     }
 
     // 原有相似推荐
     document.getElementById('rec-title').innerText = t.rec;
-    const recUrl = `https://api.themoviedb.org/3/${type}/${id}/recommendations?api_key=${TMDB_API_KEY}&language=${tmdbLang}`;
-    await renderGrid(recUrl, 'recommendations-grid', false, type);
+    await renderGrid(`/${type}/${id}/recommendations`, 'recommendations-grid', false, type);
 }
 
 // 6. 演员页面
@@ -618,8 +625,7 @@ async function loadActorPage(actorId) {
     const t = ui[currentLang];
     const tmdbLang = currentLang === 'zh' ? 'zh-CN' : 'en-US';
 
-    const actorRes = await fetch(`https://api.themoviedb.org/3/person/${actorId}?api_key=${TMDB_API_KEY}&language=${tmdbLang}`);
-    const actor = await actorRes.json();
+    const actor = await fetchTMDB(`/person/${actorId}`, { language: tmdbLang });
 
     // 演员页Meta
     setPageMeta("actor", { actorName: actor.name });
@@ -642,9 +648,7 @@ async function loadActorPage(actorId) {
     document.getElementById('actor-birthday').innerText = actor.birthday || "-";
     document.getElementById('actor-place').innerText = actor.place_of_birth || "-";
 
-    const creditsUrl = `https://api.themoviedb.org/3/person/${actorId}/combined_credits?api_key=${TMDB_API_KEY}&language=${tmdbLang}`;
-    const creditsRes = await fetch(creditsUrl);
-    const creditsData = await creditsRes.json();
+    const creditsData = await fetchTMDB(`/person/${actorId}/combined_credits`, { language: tmdbLang });
 
     let sortedMovies = [];
     if (creditsData.cast) {
@@ -684,16 +688,17 @@ async function loadActorPage(actorId) {
     grid.innerHTML = moviesHtml;
 }
 
-// 7. 卡片渲染（最多18张，3行6列）
-async function renderGrid(apiUrl, targetElementId, isMultiSearch = false, defaultType = 'movie') {
+// 7. 卡片渲染（改造后，接收路径+参数，不再接收完整URL）
+async function renderGrid(tmdbPath, targetElementId, isMultiSearch = false, defaultType = 'movie', extraParams = {}) {
     const grid = document.getElementById(targetElementId);
     if (!grid) return;
     grid.innerHTML = "...";
     try {
-        const res = await fetch(apiUrl);
-        const data = await res.json();
-        grid.innerHTML = "";
+        const tmdbLang = currentLang === 'zh' ? 'zh-CN' : 'en-US';
+        const reqParams = { language: tmdbLang, ...extraParams };
+        const data = await fetchTMDB(tmdbPath, reqParams);
 
+        grid.innerHTML = "";
         const rawItems = data.results || data.cast || [];
         const items = rawItems.filter(item => item.poster_path).slice(0, 18);
         if (items.length === 0) {
