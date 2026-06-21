@@ -4,10 +4,7 @@ export const config = {
 
 export default async function handler() {
   const baseUrl = "https://xiedang.com";
-  const staticPages = [
-    { path: "/", priority: "1.0", changefreq: "daily" },
-  ];
-
+  const staticPages = [{ path: "/", priority: "1.0", changefreq: "daily" }];
   const topics = [
     "2026-sci-fi",
     "2025-horror",
@@ -21,19 +18,17 @@ export default async function handler() {
     priority: "0.8",
     changefreq: "weekly"
   }));
-
   const allUrls = [...staticPages, ...topicUrls];
 
-  // 严格纯净XML，无多余空行、无script污染
-  let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
+  let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">';
   allUrls.forEach(item => {
-    xml += `  <url>
+    xml += `\n  <url>
     <loc>${baseUrl}${item.path}</loc>
     <changefreq>${item.changefreq}</changefreq>
     <priority>${item.priority}</priority>
-  </url>\n`;
+  </url>`;
   });
-  xml += "</urlset>";
+  xml += "\n</urlset>";
 
   return new Response(xml, {
     headers: {
