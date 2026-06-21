@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TMDB Movie Hub</title>
+    <!-- 多语言SEO hreflang 标签 -->
+    <link rel="alternate" hreflang="zh-CN" href="https://你的域名.com/">
+    <link rel="alternate" hreflang="en" href="https://你的域名.com/?lang=en">
+    <link rel="alternate" hreflang="x-default" href="https://你的域名.com/">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header class="navbar">
+        <div class="nav-container">
+            <h1 class="logo" onclick="window.location.search=''">🎬 MovieHub</h1>
+            <div class="search-box">
+                <input type="text" id="search-input" placeholder="搜索电影或电视剧...">
+                <button class="search-btn" onclick="handleSearch()">🔍</button>
+            </div>
+            <button class="lang-btn" id="lang-btn" onclick="toggleLanguage()">English</button>
+        </div>
+    </header>
+
+    <div id="home-view" class="view-section">
+        <div class="genres-container">
+            <div class="genres-list" id="genres-list"></div>
+        </div>
+
+        <!-- 新增：长尾专题入口区块 -->
+        <section class="topic-section">
+            <h2 class="sub-block-title" id="topic-block-title"></h2>
+            <div class="topic-list" id="topic-list"></div>
+        </section>
+
+        <main class="container">
+            <!-- 【新增：热门电影板块】 -->
+            <section class="home-section">
+                <h2 class="sub-block-title" id="title-popular">热门电影</h2>
+                <div class="movie-grid" id="grid-popular"></div>
+            </section>
+
+            <section class="home-section">
+                <h2 class="sub-block-title" id="title-trending">今日趋势</h2>
+                <div class="movie-grid" id="grid-trending"></div>
+            </section>
+
+            <section class="home-section">
+                <h2 class="sub-block-title" id="title-upcoming">院线新片</h2>
+                <div class="movie-grid" id="grid-upcoming"></div>
+            </section>
+
+            <section class="home-section">
+                <h2 class="sub-block-title" id="title-top-rated">高分神作</h2>
+                <div class="movie-grid" id="grid-top-rated"></div>
+            </section>
+
+            <section class="home-section">
+                <h2 class="sub-block-title" id="title-tv-shows">热门剧集</h2>
+                <div class="movie-grid" id="grid-tv-shows"></div>
+            </section>
+        </main>
+    </div>
+
+    <div id="detail-view" class="view-section" style="display: none;">
+        <div class="detail-backdrop" id="detail-backdrop">
+            <div class="backdrop-mask"></div>
+        </div>
+        
+        <div class="container detail-container">
+            <div class="detail-main">
+                <img class="detail-img" id="detail-img" src="" alt="Poster">
+                <div class="detail-info">
+                    <h1 class="detail-title" id="detail-title"></h1>
+                    <p class="detail-tagline" id="detail-tagline"></p>
+                    <div class="detail-genres" id="detail-genres"></div>
+                    <div class="detail-meta-top">
+                        <span id="detail-date"></span>
+                        <span id="detail-score"></span>
+                        <span id="detail-popularity"></span>
+                        <span id="detail-director-top" style="margin-left:15px; color:#aaa;"></span>
+                    </div>
+                    <h2 class="block-title" id="detail-overview-title">剧情简介</h2>
+                    <p class="detail-overview" id="detail-overview"></p>
+                    <a class="watch-btn" id="watch-btn" href="#" target="_blank">🎬 前往播放源</a>
+                </div>
+            </div>
+
+            <div class="detail-content-layout">
+                <div class="content-left">
+                    <h2 class="block-title" id="cast-title">演员阵容</h2>
+                    <div class="detail-cast" id="detail-cast"></div>
+
+                    <!-- 新增1：同导演作品区块 -->
+                    <h2 class="block-title" id="same-director-title" style="margin-top: 40px;"></h2>
+                    <div class="movie-grid" id="same-director-grid"></div>
+
+                    <!-- 新增2：同类型高分影片区块 -->
+                    <h2 class="block-title" id="same-genre-title" style="margin-top: 40px;"></h2>
+                    <div class="movie-grid" id="same-genre-grid"></div>
+                    
+                    <h2 class="block-title" id="rec-title" style="margin-top: 40px;">为您推荐</h2>
+                    <div class="movie-grid" id="recommendations-grid"></div>
+                </div>
+                
+                <div class="content-right">
+                    <div class="meta-box">
+                        <h3 id="meta-box-title">电影数据</h3>
+                        <div class="meta-item">
+                            <span class="meta-lbl" id="meta-lbl-status">电影状态</span>
+                            <span class="meta-val" id="meta-status">-</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-lbl" id="meta-lbl-budget">制作预算</span>
+                            <span class="meta-val" id="meta-budget">-</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-lbl" id="meta-lbl-revenue">全球票房</span>
+                            <span class="meta-val" id="meta-revenue">-</span>
+                        </div>
+                    </div>
+                    <div class="keywords-box">
+                        <h3 id="keywords-box-title">关键词</h3>
+                        <div class="detail-keywords" id="detail-keywords"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="actor-view" class="view-section" style="display: none;">
+        <div class="container actor-container">
+            <div class="actor-left">
+                <img id="actor-big-img" src="" alt="Actor">
+                <div class="actor-facts">
+                    <h3 id="actor-info-title">个人信息</h3>
+                    <div class="fact-item"><b id="lbl-actor-gender">性别</b><p id="actor-gender">-</p></div>
+                    <div class="fact-item"><b id="lbl-actor-birthday">生日</b><p id="actor-birthday">-</p></div>
+                    <div class="fact-item"><b id="lbl-actor-place">出生地</b><p id="actor-place">-</p></div>
+                </div>
+            </div>
+            <div class="actor-right">
+                <h1 id="actor-name"></h1>
+                <h2 class="block-title" id="actor-bio-title" style="margin-top:20px;">生平简介</h2>
+                <p id="actor-biography" class="actor-biography"></p>
+                <h2 class="block-title" id="actor-known-title" style="margin-top:40px;">知名作品</h2>
+                <div class="movie-grid" id="actor-movies-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="pagination-box" id="pagination-box">
+        <button class="page-btn" id="prev-btn" onclick="changePage(-1)">◀ 上一页</button>
+        <span class="page-num" id="page-num">1</span>
+        <button class="page-btn" id="next-btn" onclick="changePage(1)">下一页 ▶</button>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
