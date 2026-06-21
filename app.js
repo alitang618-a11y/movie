@@ -1,5 +1,5 @@
 // 1. 默认英文 TMDB 密钥
-const TMDB_API_KEY = "********";//你自己申请的key
+const TMDB_API_KEY = "877a96b897b1ba6051ab669f66954418";//你自己申请的key
 
 let currentLang = 'en'; // 默认英文
 let currentPage = 1;
