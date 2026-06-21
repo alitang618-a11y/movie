@@ -1,36 +1,35 @@
-export default async function handler(req, res) {
-  // 跨域允许前端访问
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+export const config = {
+  runtime: "edge",
+};
 
-  // 处理浏览器预检OPTIONS请求
-  if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'GET') return res.status(405).json({ error: "仅支持GET请求" });
+export default async function handler(req) {
+  const { searchParams } = new URL(req.url);
+  const tmdbPath = searchParams.get("path");
+  if (!tmdbPath) {
+    return Response.json({ error: "缺少path参数" }, { status: 400 });
+  }
 
-  const { path, ...queryParams } = req.query;
-  // 读取Vercel后台配置的密钥
-  const tmdbKey = process.env.TMDB_API_KEY;
-  if (!tmdbKey) return res.status(500).json({ error: "服务端未配置TMDB密钥" });
+  // 取出Vercel后台存放的密钥
+  const API_KEY = process.env.TMDB_API_KEY;
+  // 删除path，剩余全部透传给TMDB接口
+  searchParams.delete("path");
 
-  // 拼接TMDB接口路径
-  const tmdbApiPath = Array.isArray(path) ? path.join('/') : path;
-  const baseUrl = `https://api.themoviedb.org/3/${tmdbApiPath}`;
-
-  // 自动拼接密钥，前端不用携带
-  const searchParams = new URLSearchParams();
-  searchParams.append("api_key", tmdbKey);
-  Object.entries(queryParams).forEach(([key, val]) => {
-    if (key !== "path") searchParams.append(key, val);
-  });
-
-  const finalUrl = `${baseUrl}?${searchParams.toString()}`;
+  const tmdbUrl = new URL(`https://api.themoviedb.org/3${tmdbPath}`);
+  // 拼接所有查询参数
+  tmdbUrl.searchParams.set("api_key", API_KEY);
+  for (const [k, v] of searchParams) {
+    tmdbUrl.searchParams.set(k, v);
+  }
 
   try {
-    const tmdbResponse = await fetch(finalUrl);
-    const data = await tmdbResponse.json();
-    return res.status(tmdbResponse.status).json(data);
+    const res = await fetch(tmdbUrl.toString(), {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+    const data = await res.json();
+    return Response.json(data, { status: res.status });
   } catch (err) {
-    return res.status(500).json({ error: "TMDB接口请求失败", detail: err.message });
+    return Response.json({ error: "TMDB请求失败", msg: err.message }, { status: 500 });
   }
 }
