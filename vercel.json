@@ -2,8 +2,7 @@
   "rewrites": [
     {
       "source": "/(.*)",
-      "destination": "/404.html",
-      "status": 404
+      "destination": "/index.html"
     }
   ]
 }
